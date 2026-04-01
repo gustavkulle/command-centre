@@ -636,16 +636,30 @@ function scheduleSave() { clearTimeout(saveTimer); saveTimer=setTimeout(saveNow,
 function loadFromStorage() {
   setSave('saving','Loading…');
   try {
-    // Load all days
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      allDays = JSON.parse(raw);
-      if (allDays[TODAY]) {
-        state = {...state, ...allDays[TODAY]};
-        restoreUI();
-      }
+    if (raw) { allDays = JSON.parse(raw); }
+
+    // Always recalculate today's date fresh — never rely on cached constant
+    const realToday = new Date().toISOString().split('T')[0];
+
+    // Only restore if data was saved on today's actual date
+    if (allDays[realToday] && allDays[realToday].date === realToday) {
+      state = {...state, ...allDays[realToday]};
+      restoreUI();
+    } else {
+      // New day — full reset, no leftover data
+      state = {
+        date: realToday, energy: '', checks: {}, bottles: 0,
+        priorities: { p1:{text:'',done:false}, p2:{text:'',done:false}, p3:{text:'',done:false} },
+        wins: {w1:'',w2:'',w3:''}, scores: {rituals:'0%',habits:'0%',priorities:'0%',overall:'0%'},
+        streaks: {habits:0,workout:0,meditate:0},
+        moodWord:'', theme:'', morningIntention:'', successCriteria:'', workoutNote:'',
+        snackTrigger:'', wouldDoDifferently:'', tomorrowIntention:'', emotionalCheckin:''
+      };
+      buildBottles();
+      calcScores();
     }
-    // Load webhook
+
     const wh = localStorage.getItem(WEBHOOK_KEY);
     if (wh) { webhookUrl=wh; document.getElementById('webhook-input').value=wh; setSheet(true); }
 
