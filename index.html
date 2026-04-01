@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Command Centre — Gus</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0d0d0d;--surface:#141414;--surface2:#1c1c1c;--border:#2a2a2a;
+  --accent:#c8a96e;--accent2:#7eb8a4;--accent3:#e06c5a;--accent4:#8ba7cc;
+  --text:#e8e4dc;--muted:#7a7570;--done-text:#555;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.4;}
+
+/* ── HEADER ── */
+header{padding:26px 44px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-end;animation:fadeDown .5s ease both;}
+.greeting{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px;}
+h1{font-family:'Playfair Display',serif;font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.1;}
+h1 span{color:var(--accent);}
+#clock{font-family:'DM Mono',monospace;font-size:clamp(20px,2.6vw,32px);font-weight:300;text-align:right;}
+#date-display{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.1em;text-align:right;}
+
+/* ── STATUS BAR ── */
+.status-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:7px 44px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.save-status{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;}
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);transition:background .4s;flex-shrink:0;}
+.save-dot.saved{background:var(--accent2);}
+.save-dot.saving{background:var(--accent);animation:pulse 1s infinite;}
+.save-dot.error{background:var(--accent3);}
+.streak-bar{display:flex;gap:14px;align-items:center;}
+.streak-chip{display:flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;}
+.streak-chip b{color:var(--accent);font-size:13px;font-family:'Playfair Display',serif;}
+.sheet-status{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.sheet-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.sheet-dot.connected{background:var(--accent2);}
+.sheet-dot.disconnected{background:var(--accent3);}
+
+/* ── NAV ── */
+.nav-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);overflow-x:auto;scrollbar-width:none;}
+.nav-tabs::-webkit-scrollbar{display:none;}
+.nav-tab{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:12px 16px;cursor:pointer;color:var(--muted);background:transparent;border:none;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── PAGES ── */
+.page{display:none;animation:fadeUp .3s ease both;}
+.page.active{display:block;}
+
+/* ── SETUP OVERLAY ── */
+.setup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:40px;max-width:560px;width:100%;animation:fadeUp .4s ease both;}
+.setup-card h2{font-family:'Playfair Display',serif;font-size:24px;color:var(--accent);margin-bottom:8px;}
+.setup-card p{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px;}
+.setup-step{display:flex;gap:12px;margin-bottom:14px;font-size:13px;line-height:1.6;}
+.step-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.25);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.setup-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:10px 14px;outline:none;transition:border-color .2s;margin-bottom:10px;}
+.setup-input:focus{border-color:var(--accent);}
+.setup-btn{background:var(--accent);color:#000;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;padding:11px 20px;cursor:pointer;text-transform:uppercase;transition:opacity .2s;width:100%;}
+.setup-btn:hover{opacity:.85;}
+.skip-btn{background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;padding:9px 20px;cursor:pointer;text-transform:uppercase;transition:all .2s;width:100%;margin-top:8px;}
+.skip-btn:hover{color:var(--text);border-color:var(--muted);}
+.setup-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);line-height:1.6;margin-top:14px;padding:10px 14px;background:var(--surface2);border-radius:4px;}
+
+/* ── PANELS ── */
+.panel{background:var(--surface);padding:20px 24px;}
+.panel-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.panel-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0;}
+.dot-gold{background:var(--accent);} .dot-green{background:var(--accent2);} .dot-red{background:var(--accent3);} .dot-blue{background:var(--accent4);}
+.mini-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;}
+
+textarea,input[type="text"]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;resize:none;outline:none;transition:border-color .2s;line-height:1.5;}
+textarea:focus,input[type="text"]:focus{border-color:var(--accent);}
+textarea{min-height:62px;}
+
+/* ── CHECK ITEMS ── */
+.check-item{display:flex;align-items:center;gap:11px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);transition:opacity .15s;}
+.check-item:last-child{border-bottom:none;}
+.check-item.done .check-label{text-decoration:line-through;color:var(--done-text);}
+.check-box{width:20px;height:20px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:11px;}
+.check-item.done .check-box{background:var(--accent);border-color:var(--accent);color:#000;}
+.check-label{font-size:13px;transition:color .2s;flex:1;}
+.check-meta{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);flex-shrink:0;}
+
+/* ── SUPPLEMENTS ── */
+.supps-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.supp-item{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:4px;padding:9px 11px;cursor:pointer;border:1px solid var(--border);transition:all .2s;}
+.supp-item.done{border-color:var(--accent);opacity:.55;}
+.supp-item.done .supp-name{text-decoration:line-through;color:var(--done-text);}
+.supp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.supp-name{font-size:12px;line-height:1.3;}
+.supp-note{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:1px;}
+
+/* ── BOTTLES ── */
+.bottles{display:flex;gap:14px;align-items:flex-end;margin:10px 0 8px;}
+.bottle-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;}
+.bottle{width:46px;height:76px;border:2px solid var(--border);border-radius:5px 5px 7px 7px;position:relative;overflow:hidden;transition:border-color .25s;background:var(--surface2);}
+.bottle-neck{width:22px;height:13px;border:2px solid var(--border);border-bottom:none;border-radius:4px 4px 0 0;margin:0 auto;transition:border-color .25s;background:var(--surface2);}
+.bottle-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(139,167,204,.75),rgba(139,167,204,.3));transition:height .4s cubic-bezier(.34,1.56,.64,1);height:0;}
+.bottle-wrap.filled .bottle{border-color:var(--accent4);}
+.bottle-wrap.filled .bottle-neck{border-color:var(--accent4);}
+.bottle-wrap.filled .bottle-fill{height:100%;}
+.bottle-lbl{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:center;line-height:1.3;}
+.bottle-wrap.filled .bottle-lbl{color:var(--accent4);}
+.water-status{font-family:'DM Mono',monospace;font-size:11px;color:var(--accent4);margin-top:4px;}
+
+/* ── ENERGY ── */
+.energy-row{display:flex;gap:7px;margin-bottom:12px;}
+.energy-btn{flex:1;padding:9px 4px;border-radius:4px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.06em;text-align:center;transition:all .2s;text-transform:uppercase;}
+.energy-btn.sel-high{border-color:var(--accent2);color:var(--accent2);background:rgba(126,184,164,.08);}
+.energy-btn.sel-mid{border-color:var(--accent);color:var(--accent);background:rgba(200,169,110,.08);}
+.energy-btn.sel-low{border-color:var(--accent3);color:var(--accent3);background:rgba(224,108,90,.08);}
+
+/* ── SCORES ── */
+.score-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.score-cell{background:var(--surface2);border-radius:4px;padding:11px 6px;text-align:center;}
+.score-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--accent);}
+.score-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px;}
+
+/* ── PRIORITIES ── */
+.priority-list{list-style:none;}
+.priority-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.priority-item:last-child{border-bottom:none;}
+.priority-item.done .pri-text{text-decoration:line-through;color:var(--done-text);}
+.pri-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);width:18px;flex-shrink:0;margin-top:2px;}
+.pri-text{font-size:13px;line-height:1.4;flex:1;outline:none;}
+
+/* ── TIME BLOCKS ── */
+.tb-list{list-style:none;}
+.tb-item{display:flex;align-items:center;gap:11px;padding:7px 0;border-bottom:1px solid var(--border);}
+.tb-item:last-child{border-bottom:none;}
+.tb-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);width:46px;flex-shrink:0;}
+.tb-bar{width:3px;height:24px;border-radius:2px;flex-shrink:0;}
+.tb-content{font-size:12px;line-height:1.3;}
+.tb-tag{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* ── READING ── */
+.read-item{display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.read-item:last-child{border-bottom:none;}
+.read-item.done .read-title{text-decoration:line-through;color:var(--done-text);}
+.read-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);width:18px;flex-shrink:0;margin-top:3px;}
+.read-body{flex:1;}
+.read-title{font-size:13px;font-weight:500;margin-bottom:3px;}
+.read-why{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:4px;}
+.read-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.read-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;}
+.read-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);}
+.tag-emba{background:rgba(139,167,204,.15);color:var(--accent4);}
+.tag-utd{background:rgba(224,108,90,.15);color:var(--accent3);}
+.tag-self{background:rgba(200,169,110,.15);color:var(--accent);}
+.tag-fun{background:rgba(122,117,112,.2);color:var(--muted);}
+
+/* ── PODCASTS ── */
+.pod-item{display:flex;align-items:flex-start;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);}
+.pod-item:last-child{border-bottom:none;}
+.pod-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent2);width:18px;flex-shrink:0;margin-top:2px;}
+.pod-show{font-size:11px;font-family:'DM Mono',monospace;color:var(--accent2);margin-bottom:2px;}
+.pod-tier{font-family:'DM Mono',monospace;font-size:9px;padding:1px 6px;border-radius:2px;margin-left:5px;}
+.tier1{background:rgba(200,169,110,.15);color:var(--accent);}
+.tier2{background:rgba(139,167,204,.12);color:var(--accent4);}
+.pod-reason{font-size:12px;color:var(--muted);line-height:1.4;}
+
+/* ── TRENDS ── */
+.trend-section{margin-bottom:24px;}
+.trend-title{font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.18em;text-transform:uppercase;margin-bottom:12px;}
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:80px;}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+.bar-col-bar{width:100%;border-radius:3px 3px 0 0;transition:height .5s cubic-bezier(.34,1.2,.64,1);min-height:3px;}
+.bar-col-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;}
+.bar-col-val{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-align:center;}
+.heatmap{display:flex;flex-direction:column;gap:7px;}
+.hmap-row{display:flex;align-items:center;gap:5px;}
+.hmap-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);width:90px;text-align:right;flex-shrink:0;}
+.hmap-cells{display:flex;gap:3px;}
+.hmap-cell{width:20px;height:20px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);transition:background .3s;cursor:default;position:relative;}
+.hmap-cell.done{background:var(--accent2);}
+.hmap-cell.missed{background:rgba(224,108,90,.2);}
+.hmap-cell.empty{background:var(--border);}
+.hmap-cell[title]:hover::after{content:attr(title);position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:3px 7px;font-family:'DM Mono',monospace;font-size:9px;white-space:nowrap;pointer-events:none;z-index:10;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
+.stat-card{background:var(--surface2);border-radius:4px;padding:14px 10px;text-align:center;}
+.stat-val{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--accent);}
+.stat-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:3px;}
+.no-data{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:30px;letter-spacing:.1em;}
+
+/* ── DOMAIN TABS ── */
+.tab-row{display:flex;gap:4px;margin-bottom:13px;flex-wrap:wrap;}
+.tab{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border:1px solid var(--border);border-radius:3px;cursor:pointer;color:var(--muted);background:transparent;transition:all .15s;}
+.tab.active{background:var(--accent);color:#000;border-color:var(--accent);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+.prompt-card{background:linear-gradient(135deg,rgba(200,169,110,.08),rgba(200,169,110,.02));border:1px solid rgba(200,169,110,.2);border-radius:4px;padding:12px 15px 12px 30px;margin-top:10px;font-size:13px;line-height:1.6;color:var(--text);font-style:italic;position:relative;}
+.prompt-card::before{content:'❝';color:var(--accent);font-size:17px;position:absolute;top:9px;left:9px;font-style:normal;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);}
+.weekend-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.25);border-radius:3px;padding:4px 9px;font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:11px;}
+.sunday-reminder{background:linear-gradient(135deg,rgba(139,167,204,.08),rgba(139,167,204,.02));border:1px solid rgba(139,167,204,.25);border-radius:4px;padding:12px 15px;font-size:13px;line-height:1.6;margin-top:11px;}
+.sunday-reminder strong{color:var(--accent4);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:5px;}
+
+/* ── SHEET SETUP PANEL ── */
+.sheet-panel{background:linear-gradient(135deg,rgba(139,167,204,.06),rgba(139,167,204,.01));border:1px solid rgba(139,167,204,.2);border-radius:4px;padding:16px;margin-bottom:14px;}
+.sheet-panel h3{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent4);margin-bottom:8px;}
+.sheet-url-row{display:flex;gap:8px;margin-top:8px;}
+.sheet-url-input{flex:1;font-family:'DM Mono',monospace;font-size:11px;}
+.connect-btn{background:var(--accent4);color:#000;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;padding:8px 14px;cursor:pointer;white-space:nowrap;transition:opacity .2s;}
+.connect-btn:hover{opacity:.85;}
+.sync-btn{background:var(--accent2);color:#000;border:none;border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;padding:8px 14px;cursor:pointer;white-space:nowrap;transition:opacity .2s;margin-top:8px;}
+.sync-btn:hover{opacity:.85;}
+.sync-result{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;min-height:16px;}
+
+footer{padding:14px 44px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.footer-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;}
+.completion-pct{font-family:'Playfair Display',serif;font-size:20px;color:var(--accent);font-weight:700;}
+.completion-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:right;text-transform:uppercase;letter-spacing:.1em;}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+@media(max-width:900px){
+  .grid-4{grid-template-columns:1fr 1fr;}
+  header{padding:20px 18px 14px;flex-direction:column;align-items:flex-start;gap:8px;}
+  #clock,#date-display{text-align:left;}
+  .panel{padding:16px 14px;}
+  .status-bar{padding:7px 16px;}
+  footer{padding:12px 18px;}
+  .score-grid{grid-template-columns:repeat(2,1fr);}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:600px){
+  .grid-4,.grid-2{grid-template-columns:1fr;}
+  .supps-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ SETUP OVERLAY ═══════════════════ -->
+<div id="setup-overlay" class="setup-overlay" style="display:none;">
+  <div class="setup-card">
+    <h2>Connect Google Sheets</h2>
+    <p>One-time setup to automatically send your daily data to a Google Sheet. Takes about 5 minutes.</p>
+    
+    <div class="setup-step"><div class="step-num">1</div><div>Go to <strong>sheets.google.com</strong> → create a new sheet called <strong>"Command Centre Data"</strong></div></div>
+    <div class="setup-step"><div class="step-num">2</div><div>Click <strong>Extensions → Apps Script</strong> → delete all existing code → paste the Apps Script file I gave you → Save</div></div>
+    <div class="setup-step"><div class="step-num">3</div><div>Click <strong>Deploy → New Deployment → Web app</strong> → Execute as: Me → Who has access: Anyone → Deploy → Authorize → Allow</div></div>
+    <div class="setup-step"><div class="step-num">4</div><div>Copy the <strong>Web App URL</strong> and paste it below</div></div>
+    
+    <input type="text" class="setup-input" id="setup-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"/>
+    <button class="setup-btn" onclick="saveWebhookUrl()">Connect & Test</button>
+    <button class="skip-btn" onclick="skipSetup()">Skip for now — use local storage only</button>
+    <div class="setup-note">Your data stays private. The webhook only accepts POST requests from this dashboard and writes to your own Google Sheet.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN UI ═══════════════════ -->
+<header>
+  <div>
+    <div class="greeting" id="greeting-label">Good morning</div>
+    <h1>Gus's <span>Command Centre</span></h1>
+  </div>
+  <div>
+    <div id="clock">--:--</div>
+    <div id="date-display">—</div>
+  </div>
+</header>
+
+<div class="status-bar">
+  <div class="save-status">
+    <div class="save-dot" id="save-dot"></div>
+    <span id="save-text">Loading…</span>
+  </div>
+  <div class="streak-bar">
+    <div class="streak-chip">🔥 <b id="streak-habits">—</b> habits</div>
+    <div class="streak-chip">💪 <b id="streak-workout">—</b> workouts</div>
+    <div class="streak-chip">🧘 <b id="streak-meditate">—</b> meditations</div>
+  </div>
+  <div class="sheet-status">
+    <div class="sheet-dot" id="sheet-dot"></div>
+    <span id="sheet-text">Sheets not connected</span>
+  </div>
+</div>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="showPage('morning',this)">🌅 Morning</button>
+  <button class="nav-tab" onclick="showPage('habits',this)">🌿 Habits</button>
+  <button class="nav-tab" onclick="showPage('priorities',this)">🎯 Priorities</button>
+  <button class="nav-tab" onclick="showPage('projects',this)">📁 Projects</button>
+  <button class="nav-tab" onclick="showPage('reading',this)">📖 Reading</button>
+  <button class="nav-tab" onclick="showPage('podcasts',this)">🎧 Podcasts</button>
+  <button class="nav-tab" onclick="showPage('trends',this)">📊 Trends</button>
+  <button class="nav-tab" onclick="showPage('evening',this)">🌙 Evening</button>
+  <button class="nav-tab" onclick="showPage('settings',this)">⚙️ Settings</button>
+</nav>
+
+<!-- ════════ MORNING ════════ -->
+<div id="page-morning" class="page active">
+  <div class="grid-4" style="background:var(--border);">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Morning rituals</div>
+      <div id="ritual-checks">
+        <div class="check-item" data-key="meditate" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Meditate (Waking Up)</span><span class="check-meta">10–20m</span></div>
+        <div class="check-item" data-key="stretch" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Stretch</span><span class="check-meta">10m</span></div>
+        <div class="check-item" data-key="gratitude" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Gratitude + Reflection</span><span class="check-meta">notebook</span></div>
+        <div class="check-item" data-key="intentions" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Set 3 intentions</span><span class="check-meta">→ Priorities</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>Body</div>
+      <div id="workout-checks">
+        <div class="check-item" data-key="workout" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Workout</span><span class="check-meta">HIIT / Run</span></div>
+        <div class="check-item" data-key="shower" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Shower</span></div>
+      </div>
+      <div style="margin-top:11px;">
+        <div class="mini-label">Session note</div>
+        <input type="text" id="workout-note" placeholder="e.g. 5km run, 32 min" oninput="scheduleSave()"/>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-red"></span>Comms sweep</div>
+      <div id="comms-checks">
+        <div class="check-item" data-key="email" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Email inbox</span><span class="check-meta">≤15m</span></div>
+        <div class="check-item" data-key="whatsapp" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">WhatsApp (EMBA, IB, UTD)</span><span class="check-meta">≤10m</span></div>
+        <div class="check-item" data-key="tasks-check" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">Apple Tasks review</span><span class="check-meta">triage</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Energy today</div>
+      <div class="energy-row">
+        <button class="energy-btn" id="en-high" onclick="setEnergy('high',this)">High ⚡</button>
+        <button class="energy-btn" id="en-mid" onclick="setEnergy('mid',this)">Med ◉</button>
+        <button class="energy-btn" id="en-low" onclick="setEnergy('low',this)">Low ○</button>
+      </div>
+      <div class="mini-label">One word: how do I feel?</div>
+      <input type="text" id="mood-word" placeholder="clear, tired, motivated…" style="margin-bottom:9px;" oninput="scheduleSave()"/>
+      <div class="mini-label">Today's theme</div>
+      <input type="text" id="today-theme" placeholder="e.g. 'deep work day'" oninput="scheduleSave()"/>
+    </div>
+  </div>
+
+  <div class="grid-2" style="background:var(--border);margin-top:1px;">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>Time blocks</div>
+      <ul class="tb-list">
+        <li class="tb-item"><span class="tb-time">07:30</span><div class="tb-bar" style="background:var(--accent);"></div><div><div class="tb-content">Morning rituals</div><div class="tb-tag">Meditate · Stretch · Journal</div></div></li>
+        <li class="tb-item"><span class="tb-time">08:30</span><div class="tb-bar" style="background:var(--accent2);"></div><div><div class="tb-content">Workout + Shower</div><div class="tb-tag">HIIT / Run</div></div></li>
+        <li class="tb-item"><span class="tb-time">09:30</span><div class="tb-bar" style="background:var(--accent3);"></div><div><div class="tb-content">Deep work block 1</div><div class="tb-tag">EMBA / IB / Job search</div></div></li>
+        <li class="tb-item"><span class="tb-time">11:30</span><div class="tb-bar" style="background:var(--border);"></div><div><div class="tb-content">Comms sweep + news</div><div class="tb-tag">Email · FT · Apple News</div></div></li>
+        <li class="tb-item"><span class="tb-time">12:30</span><div class="tb-bar" style="background:var(--accent2);"></div><div><div class="tb-content">Lunch + podcast</div><div class="tb-tag">Castro queue</div></div></li>
+        <li class="tb-item"><span class="tb-time">13:30</span><div class="tb-bar" style="background:var(--accent3);"></div><div><div class="tb-content">Deep work block 2</div><div class="tb-tag">UTD Podden / job leads</div></div></li>
+        <li class="tb-item"><span class="tb-time">16:30</span><div class="tb-bar" style="background:var(--accent);"></div><div><div class="tb-content">Admin + tasks triage</div><div class="tb-tag">Apple Tasks</div></div></li>
+        <li class="tb-item"><span class="tb-time">19:00</span><div class="tb-bar" style="background:var(--accent4);"></div><div><div class="tb-content">Dinner + Omega 3 dose 2</div><div class="tb-tag">Supplement reminder</div></div></li>
+        <li class="tb-item"><span class="tb-time">21:00</span><div class="tb-bar" style="background:var(--muted);"></div><div><div class="tb-content">Evening reflection</div><div class="tb-tag">3 wins · tomorrow's focus</div></div></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Morning intention</div>
+      <textarea id="morning-intention" placeholder="In 2–3 sentences: what am I really trying to do today, and why does it matter?" oninput="scheduleSave()"></textarea>
+      <div class="prompt-card"><p id="daily-prompt">…</p></div>
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+        <div class="panel-label" style="margin-bottom:10px;"><span class="dot dot-gold"></span>Day score</div>
+        <div class="score-grid">
+          <div class="score-cell"><div class="score-val" id="score-rituals">0%</div><div class="score-lbl">Rituals</div></div>
+          <div class="score-cell"><div class="score-val" id="score-habits">0%</div><div class="score-lbl">Habits</div></div>
+          <div class="score-cell"><div class="score-val" id="score-priorities">0%</div><div class="score-lbl">Priorities</div></div>
+          <div class="score-cell"><div class="score-val" id="score-overall">0%</div><div class="score-lbl">Overall</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ HABITS ════════ -->
+<div id="page-habits" class="page">
+  <div class="grid-2" style="background:var(--border);">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Daily supplements</div>
+      <div class="mini-label" style="margin-bottom:9px;">Morning — with breakfast</div>
+      <div class="supps-grid" id="supps-morning">
+        <div class="supp-item" data-key="supp-omega-am" onclick="toggleSupp(this)"><div class="supp-dot" style="background:#c8a96e;"></div><div><div class="supp-name">Omega 3</div><div class="supp-note">dose 1 of 2</div></div></div>
+        <div class="supp-item" data-key="supp-multi" onclick="toggleSupp(this)"><div class="supp-dot" style="background:#7eb8a4;"></div><div><div class="supp-name">Multi-vitamin</div></div></div>
+        <div class="supp-item" data-key="supp-fin" onclick="toggleSupp(this)"><div class="supp-dot" style="background:#8ba7cc;"></div><div><div class="supp-name">Finasteride</div></div></div>
+        <div class="supp-item" data-key="supp-creatine" onclick="toggleSupp(this)"><div class="supp-dot" style="background:#e06c5a;"></div><div><div class="supp-name">Creatine 5g</div></div></div>
+      </div>
+      <div class="mini-label" style="margin-top:16px;margin-bottom:9px;">Evening — with dinner</div>
+      <div class="supp-item" style="max-width:200px;" data-key="supp-omega-pm" onclick="toggleSupp(this)" id="omega3-pm"><div class="supp-dot" style="background:#c8a96e;"></div><div><div class="supp-name">Omega 3</div><div class="supp-note">dose 2 of 2</div></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-blue"></span>Hydration — 2.4L daily</div>
+      <div class="mini-label" style="margin-bottom:3px;">900ml bottle · tap to fill · 3 = 2.7L</div>
+      <div class="bottles" id="bottle-row"></div>
+      <div class="water-status" id="water-status">0 / 2700ml</div>
+      <div style="margin-top:11px;font-size:12px;color:var(--muted);line-height:1.9;">
+        🌅 Bottle 1 — morning (wake → 10am)<br>
+        ☀️ Bottle 2 — midday (lunch → 3pm)<br>
+        🌆 Bottle 3 — afternoon (3pm → dinner)
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-red"></span>Food rule</div>
+      <div class="check-item" data-key="no-snacking" onclick="toggleCheck(this)" style="border:none;padding-bottom:0;"><div class="check-box">✓</div><span class="check-label">No crisps / candy alone today</span></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.6;">Social settings only. Note the trigger if you slip.</div>
+      <div style="margin-top:9px;"><input type="text" id="snack-trigger" placeholder="Trigger note if needed…" oninput="scheduleSave()"/></div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>Weekly rituals</div>
+      <div id="weekend-badge-wrap"></div>
+      <div class="check-item" data-key="plants" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🌿 Water the plants</span><span class="check-meta">Sat/Sun</span></div>
+      <div class="check-item" data-key="facial" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🧴 Facial routine</span><span class="check-meta">scrub + mask</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ PRIORITIES ════════ -->
+<div id="page-priorities" class="page">
+  <div class="grid-2" style="background:var(--border);">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Top 3 priorities today</div>
+      <ul class="priority-list" id="priority-list">
+        <li class="priority-item" data-key="p1" onclick="togglePriority(this)"><span class="pri-num">01</span><span class="pri-text" contenteditable="true" onclick="event.stopPropagation()" oninput="scheduleSave()">Click to edit priority 1</span></li>
+        <li class="priority-item" data-key="p2" onclick="togglePriority(this)"><span class="pri-num">02</span><span class="pri-text" contenteditable="true" onclick="event.stopPropagation()" oninput="scheduleSave()">Click to edit priority 2</span></li>
+        <li class="priority-item" data-key="p3" onclick="togglePriority(this)"><span class="pri-num">03</span><span class="pri-text" contenteditable="true" onclick="event.stopPropagation()" oninput="scheduleSave()">Click to edit priority 3</span></li>
+      </ul>
+      <div style="margin-top:13px;">
+        <div class="mini-label">What would make today a success?</div>
+        <textarea id="success-criteria" placeholder="Write it in one sentence…" oninput="scheduleSave()"></textarea>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>Claude prompts</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.9;">
+        <code style="background:var(--surface2);padding:5px 9px;border-radius:3px;font-size:11px;display:block;margin-bottom:8px;">"Morning brief. Priorities: [X,Y,Z]. Energy: [H/M/L]."</code>
+        <code style="background:var(--surface2);padding:5px 9px;border-radius:3px;font-size:11px;display:block;margin-bottom:8px;">"30 free minutes. Highest-leverage thing right now?"</code>
+        <code style="background:var(--surface2);padding:5px 9px;border-radius:3px;font-size:11px;display:block;">"Evening review. I did: [X]. 3 wins + tomorrow's intention."</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ PROJECTS ════════ -->
+<div id="page-projects" class="page">
+  <div class="panel">
+    <div class="tab-row">
+      <button class="tab active" onclick="showTab('proj','jobsearch',this)">Job Search</button>
+      <button class="tab" onclick="showTab('proj','emba',this)">EMBA</button>
+      <button class="tab" onclick="showTab('proj','utd',this)">UTD Podden</button>
+      <button class="tab" onclick="showTab('proj','ib',this)">Infinity Branch</button>
+    </div>
+    <div id="proj-jobsearch" class="tab-content active">
+      <div class="mini-label" style="margin-bottom:7px;">Today's focus</div>
+      <textarea placeholder="e.g. follow up with X, apply to Y, prep for Z call…" oninput="scheduleSave()"></textarea>
+      <div class="mini-label" style="margin-top:11px;margin-bottom:7px;">Pipeline</div>
+      <textarea placeholder="Leads, contacts, applications…" oninput="scheduleSave()"></textarea>
+    </div>
+    <div id="proj-emba" class="tab-content">
+      <div class="mini-label" style="margin-bottom:7px;">Current focus</div>
+      <textarea placeholder="Deadlines, readings, group work…" oninput="scheduleSave()"></textarea>
+      <div class="mini-label" style="margin-top:11px;margin-bottom:5px;">Next deadline</div>
+      <input type="text" placeholder="e.g. BEM assignment — 28 Apr" oninput="scheduleSave()"/>
+      <div class="mini-label" style="margin-top:9px;margin-bottom:5px;">Travel (Palo Alto / Philippines)</div>
+      <input type="text" placeholder="Status…" oninput="scheduleSave()"/>
+    </div>
+    <div id="proj-utd" class="tab-content">
+      <div class="mini-label" style="margin-bottom:7px;">This week's episode</div>
+      <textarea placeholder="Topic, talking points, research needed…" oninput="scheduleSave()"></textarea>
+      <div class="mini-label" style="margin-top:11px;margin-bottom:7px;">Sponsorship prep</div>
+      <textarea placeholder="Deck status, contacts, next steps…" oninput="scheduleSave()"></textarea>
+    </div>
+    <div id="proj-ib" class="tab-content">
+      <div class="mini-label" style="margin-bottom:7px;">This week's focus</div>
+      <textarea placeholder="Fundraising, school ops, trademark, comms…" oninput="scheduleSave()"></textarea>
+      <div class="mini-label" style="margin-top:11px;margin-bottom:5px;">Key next action</div>
+      <input type="text" placeholder="e.g. CO alignment on priorities" oninput="scheduleSave()"/>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ READING ════════ -->
+<div id="page-reading" class="page">
+  <div class="panel">
+    <div class="panel-label"><span class="dot dot-gold"></span>Today's top 5 reads</div>
+    <div id="reading-list">
+      <div class="read-item" onclick="toggleRead(this)"><span class="read-num">01</span><div class="read-body"><div class="read-title">The Self-Help Trap — Tim Ferriss</div><div class="read-why">20+ years of optimising, now questioning it. Perfectly timed for your transition moment.</div><div class="read-meta"><span class="read-tag tag-self">Self</span><span class="read-time">⏱ ~8 min</span></div></div></div>
+      <div class="read-item" onclick="toggleRead(this)"><span class="read-num">02</span><div class="read-body"><div class="read-title">McKinsey: Mindsets of Excellent CEOs</div><div class="read-why">Leadership frameworks directly relevant to your EMBA project and career thinking.</div><div class="read-meta"><span class="read-tag tag-emba">EMBA</span><span class="read-time">⏱ ~12 min</span></div></div></div>
+      <div class="read-item" onclick="toggleRead(this)"><span class="read-num">03</span><div class="read-body"><div class="read-title">How to Do Great Work — Paul Graham</div><div class="read-why">Timeless. Perfect for a reflective job-transition period.</div><div class="read-meta"><span class="read-tag tag-self">Self</span><span class="read-time">⏱ ~25 min</span></div></div></div>
+      <div class="read-item" onclick="toggleRead(this)"><span class="read-num">04</span><div class="read-body"><div class="read-title">Gary Neville at 50: His Business Empire</div><div class="read-why">UTD adjacent — great framing for post-football career pivots.</div><div class="read-meta"><span class="read-tag tag-utd">UTD</span><span class="read-time">⏱ ~10 min</span></div></div></div>
+      <div class="read-item" onclick="toggleRead(this)"><span class="read-num">05</span><div class="read-body"><div class="read-title">Breaking the Loop: Why Bad Habits Stick</div><div class="read-why">You're rebuilding routines. Read as a companion to what we're building together.</div><div class="read-meta"><span class="read-tag tag-self">Self</span><span class="read-time">⏱ ~7 min</span></div></div></div>
+    </div>
+    <div id="sunday-reading-note" style="display:none;">
+      <div class="sunday-reminder"><strong>📚 Sunday — Instapaper refresh</strong>Export CSV → Instapaper → Settings → Export → drop it into Claude. 60 seconds.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ PODCASTS ════════ -->
+<div id="page-podcasts" class="page">
+  <div class="grid-2" style="background:var(--border);">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>🎧 Today's pick</div>
+      <div style="background:var(--surface2);border-radius:4px;padding:14px;border-left:3px solid var(--accent2);margin-bottom:18px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent2);letter-spacing:.13em;text-transform:uppercase;margin-bottom:5px;">Suggested for today</div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px;">Offside Podcast</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5;">Your weekly Swedish football fix — check Castro for this week's episode.</div>
+      </div>
+      <div class="panel-label" style="margin-bottom:9px;"><span class="dot dot-gold"></span>Your ranked list</div>
+      <div class="pod-item"><span class="pod-num">1</span><div><div class="pod-show">Offside Podcast <span class="pod-tier tier1">Core</span></div><div class="pod-reason">All-time favourite. Swedish global football, weekly, every episode.</div></div></div>
+      <div class="pod-item"><span class="pod-num">2</span><div><div class="pod-show">UTD Podden <span class="pod-tier tier1">Core</span></div><div class="pod-reason">Listen back within 48h — one thing to improve each time.</div></div></div>
+      <div class="pod-item"><span class="pod-num">3</span><div><div class="pod-show">Värvet <span class="pod-tier tier1">Core</span></div><div class="pod-reason">Best Swedish longform interviews. Kristoffer Triumf is exceptional.</div></div></div>
+      <div class="pod-item"><span class="pod-num">4</span><div><div class="pod-show">Kapitalet <span class="pod-tier tier1">Core</span></div><div class="pod-reason">Light entertaining economics. Better than heavier finance pods.</div></div></div>
+      <div class="pod-item"><span class="pod-num">5</span><div><div class="pod-show">FT News Briefing <span class="pod-tier tier1">Core</span></div><div class="pod-reason">15 min weekday brief. Replaced Wake Up to Money.</div></div></div>
+      <div class="pod-item"><span class="pod-num">6</span><div><div class="pod-show">10% Happier — Dan Harris <span class="pod-tier tier1">Core</span></div><div class="pod-reason">Direct companion to your Waking Up meditation practice.</div></div></div>
+      <div class="pod-item"><span class="pod-num">7</span><div><div class="pod-show">Fördomspodden <span class="pod-tier tier1">Core</span></div><div class="pod-reason">Top entertainment pick. Swedish psychology + fun guests. Guilt-free.</div></div></div>
+      <div class="pod-item"><span class="pod-num">8</span><div><div class="pod-show">P3 Dokumentär <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">High quality Swedish storytelling. Topic-dependent.</div></div></div>
+      <div class="pod-item"><span class="pod-num">9</span><div><div class="pod-show">The Price of Football <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Football finance — not every episode, but outstanding when relevant.</div></div></div>
+      <div class="pod-item"><span class="pod-num">10</span><div><div class="pod-show">Framgångspodden <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Easy Swedish inspiration. Default for this format.</div></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>🎙 Sunday ritual</div>
+      <div style="background:var(--surface2);border-radius:4px;padding:14px;border-left:3px solid var(--accent);margin-bottom:18px;">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:.13em;text-transform:uppercase;margin-bottom:6px;">When We Were Kings</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">290 episodes. One per Sunday evening with a glass of wine. Chronological. ~5.5 years to finish — and they're timeless.</div>
+      </div>
+      <div class="panel-label" style="margin-bottom:8px;"><span class="dot dot-blue"></span>Castro queue</div>
+      <textarea placeholder="Paste today's Castro queue for Claude to prioritise…" style="min-height:90px;"></textarea>
+      <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">
+        <div class="pod-item"><span class="pod-num">11</span><div><div class="pod-show">Söndagsintervjun <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Sunday morning coffee. One clear use case.</div></div></div>
+        <div class="pod-item"><span class="pod-num">12</span><div><div class="pod-show">P3 Dystopia <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Forward-looking Swedish. Good for EMBA + IB strategic thinking.</div></div></div>
+        <div class="pod-item"><span class="pod-num">13</span><div><div class="pod-show">The Tim Ferriss Show <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Not every episode — save best ones for long runs or travel.</div></div></div>
+        <div class="pod-item"><span class="pod-num">14</span><div><div class="pod-show">TED Radio Hour <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Replaces TED Talks Daily. Curated, topic-dependent.</div></div></div>
+        <div class="pod-item"><span class="pod-num">15</span><div><div class="pod-show">Dumma Människor <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Low-energy days, topic-dependent. No obligation.</div></div></div>
+        <div class="pod-item"><span class="pod-num">16</span><div><div class="pod-show">On Purpose — Jay Shetty <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Only when guest is exceptional. Framgångspodden is your default.</div></div></div>
+        <div class="pod-item"><span class="pod-num">17</span><div><div class="pod-show">The Intelligence — Economist <span class="pod-tier tier2">Tier 2</span></div><div class="pod-reason">Daily global context. Pair with FT Briefing — pick one per day.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TRENDS ════════ -->
+<div id="page-trends" class="page">
+  <div class="panel">
+    <div class="panel-label"><span class="dot dot-gold"></span>📊 Your trends — last 30 days</div>
+    <div id="trends-content">
+      <div class="no-data">No data yet — complete a few days to see your trends here.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ EVENING ════════ -->
+<div id="page-evening" class="page">
+  <div class="grid-2" style="background:var(--border);">
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-gold"></span>Evening close-out</div>
+      <div class="mini-label" style="margin-bottom:5px;">3 wins today</div>
+      <input type="text" id="win1" placeholder="Win 1…" style="margin-bottom:6px;" oninput="scheduleSave()"/>
+      <input type="text" id="win2" placeholder="Win 2…" style="margin-bottom:6px;" oninput="scheduleSave()"/>
+      <input type="text" id="win3" placeholder="Win 3…" style="margin-bottom:12px;" oninput="scheduleSave()"/>
+      <div class="mini-label" style="margin-bottom:5px;">What would I do differently?</div>
+      <textarea id="would-do-differently" placeholder="One honest observation…" oninput="scheduleSave()"></textarea>
+      <div class="mini-label" style="margin-top:11px;margin-bottom:5px;">Tomorrow's intention</div>
+      <textarea id="tomorrow-intention" placeholder="One sentence — what tomorrow is really about…" oninput="scheduleSave()"></textarea>
+    </div>
+    <div class="panel">
+      <div class="panel-label"><span class="dot dot-green"></span>Final habit check</div>
+      <div class="check-item" data-key="ev-supps" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">💊 Morning supplements taken</span></div>
+      <div class="check-item" data-key="ev-omega-pm" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🐟 Omega 3 evening dose</span></div>
+      <div class="check-item" data-key="ev-water" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">💧 2.4L water hit</span></div>
+      <div class="check-item" data-key="ev-snack" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🚫 No solo snacking</span></div>
+      <div class="check-item" data-key="ev-workout" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🏃 Workout done</span></div>
+      <div class="check-item" data-key="ev-meditate" onclick="toggleCheck(this)"><div class="check-box">✓</div><span class="check-label">🧘 Meditated</span></div>
+      <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">
+        <div class="mini-label" style="margin-bottom:5px;">Emotional check-in</div>
+        <textarea id="emotional-checkin" placeholder="How are you really? Emily, energy, stress…" oninput="scheduleSave()"></textarea>
+      </div>
+      <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);">
+        <div class="mini-label" style="margin-bottom:8px;">Send today's data to Google Sheets</div>
+        <button class="sync-btn" id="sync-btn" onclick="syncToSheets()">📊 Sync to Google Sheets now</button>
+        <div class="sync-result" id="sync-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ SETTINGS ════════ -->
+<div id="page-settings" class="page">
+  <div class="panel">
+    <div class="panel-label"><span class="dot dot-blue"></span>Google Sheets connection</div>
+    <div class="sheet-panel">
+      <h3>Webhook URL</h3>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:8px;">
+        Paste your Google Apps Script Web App URL here. Data syncs automatically when you click "Sync to Google Sheets" in the Evening tab.
+      </div>
+      <div class="sheet-url-row">
+        <input type="text" class="sheet-url-input" id="webhook-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"/>
+        <button class="connect-btn" onclick="saveWebhookFromSettings()">Save & Test</button>
+      </div>
+      <div class="sync-result" id="settings-sync-result"></div>
+    </div>
+
+    <div class="panel-label" style="margin-top:20px;"><span class="dot dot-red"></span>Data management</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:12px;">
+      Your data is stored in this browser using Claude's persistent storage. It persists across sessions automatically.<br>
+      Days stored: <b id="days-stored" style="color:var(--accent);">—</b>
+    </div>
+    <button onclick="exportData()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 14px;cursor:pointer;text-transform:uppercase;margin-right:8px;">Export all data (JSON)</button>
+    <button onclick="if(confirm('Clear all stored data? This cannot be undone.'))clearAllData();" style="background:rgba(224,108,90,.1);color:var(--accent3);border:1px solid rgba(224,108,90,.3);border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;padding:8px 14px;cursor:pointer;text-transform:uppercase;">Clear all data</button>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-hint">Open every morning · sync every evening</div>
+  <div style="text-align:right;">
+    <div class="completion-pct" id="overall-pct">0%</div>
+    <div class="completion-label">Day complete</div>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+const TODAY = new Date().toISOString().split('T')[0];
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let state = {
+  date: TODAY,
+  energy: '',
+  moodWord: '',
+  theme: '',
+  checks: {},
+  bottles: 0,
+  morningIntention: '',
+  successCriteria: '',
+  workoutNote: '',
+  snackTrigger: '',
+  priorities: { p1:{text:'',done:false}, p2:{text:'',done:false}, p3:{text:'',done:false} },
+  wins: { w1:'', w2:'', w3:'' },
+  wouldDoDifferently: '',
+  tomorrowIntention: '',
+  emotionalCheckin: '',
+  scores: { rituals:'0%', habits:'0%', priorities:'0%', overall:'0%' },
+  streaks: { habits:0, workout:0, meditate:0 },
+  lastSync: null,
+};
+
+let webhookUrl = '';
+let saveTimer = null;
+let allDays = {}; // { 'YYYY-MM-DD': stateObject }
+
+// ═══════════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('date-display').textContent = DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+  const h = now.getHours();
+  document.getElementById('greeting-label').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
+  document.getElementById('weekend-badge-wrap').innerHTML = isWeekend ? '<div class="weekend-badge">🌿 Weekend — plants + facial this weekend</div>' : '';
+  document.getElementById('sunday-reading-note').style.display = now.getDay() === 0 ? 'block' : 'none';
+}
+updateClock();
+setInterval(updateClock, 15000);
+
+// ═══════════════════════════════════════════════
+// PROMPT
+// ═══════════════════════════════════════════════
+const PROMPTS = [
+  "What single action today would make everything else easier or unnecessary?",
+  "What am I avoiding — and is that the most important thing?",
+  "What would the best version of me do with this free time?",
+  "Energy is finite. Where is mine best spent today?",
+  "If I described this day to a mentor tonight, would I be proud?",
+  "What do I need to let go of to move forward faster?",
+  "In 90 days, what decision made today will I be most grateful for?",
+  "Am I being reactive or proactive today?",
+  "What's the most generous thing I could do for someone today?",
+  "What skill am I building — and did I practise it yesterday?",
+  "What conversation am I putting off that needs to happen?",
+  "What would make today feel like a win, independent of outcomes?",
+];
+const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+document.getElementById('daily-prompt').textContent = PROMPTS[dayOfYear % PROMPTS.length];
+
+// ═══════════════════════════════════════════════
+// BOTTLES
+// ═══════════════════════════════════════════════
+function buildBottles() {
+  const row = document.getElementById('bottle-row');
+  row.innerHTML = '';
+  ['Morning','Midday','Evening'].forEach((lbl, i) => {
+    const w = document.createElement('div');
+    w.className = 'bottle-wrap' + (i < state.bottles ? ' filled' : '');
+    w.innerHTML = `<div class="bottle-neck"></div><div class="bottle"><div class="bottle-fill"></div></div><div class="bottle-lbl">${lbl}<br>900ml</div>`;
+    w.addEventListener('click', () => {
+      w.classList.toggle('filled');
+      state.bottles = document.querySelectorAll('.bottle-wrap.filled').length;
+      updateWaterStatus();
+      updateScores();
+      scheduleSave();
+    });
+    row.appendChild(w);
+  });
+  updateWaterStatus();
+}
+function updateWaterStatus() {
+  const ml = state.bottles * 900;
+  document.getElementById('water-status').textContent = state.bottles + ' / 3 bottles · ' + ml + 'ml' + (ml >= 2400 ? ' ✓ Goal hit!' : '');
+}
+
+// ═══════════════════════════════════════════════
+// TOGGLES
+// ═══════════════════════════════════════════════
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  const key = el.dataset.key;
+  if (key) state.checks[key] = el.classList.contains('done');
+  updateScores();
+  scheduleSave();
+}
+function toggleSupp(el) {
+  el.classList.toggle('done');
+  const key = el.dataset.key;
+  if (key) state.checks[key] = el.classList.contains('done');
+  updateScores();
+  scheduleSave();
+}
+function togglePriority(el) {
+  el.classList.toggle('done');
+  const key = el.dataset.key;
+  if (key) {
+    if (!state.priorities[key]) state.priorities[key] = {};
+    state.priorities[key].done = el.classList.contains('done');
+  }
+  updateScores();
+  scheduleSave();
+}
+function toggleRead(el) { el.classList.toggle('done'); }
+
+// ═══════════════════════════════════════════════
+// ENERGY
+// ═══════════════════════════════════════════════
+function setEnergy(level, btn) {
+  document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('sel-high','sel-mid','sel-low'));
+  btn.classList.add('sel-' + level);
+  state.energy = level;
+  scheduleSave();
+}
+
+// ═══════════════════════════════════════════════
+// SCORES
+// ═══════════════════════════════════════════════
+function updateScores() {
+  const ritualKeys = ['meditate','stretch','gratitude','intentions','workout','shower','email','whatsapp','tasks-check'];
+  const ritualDone = ritualKeys.filter(k => state.checks[k]).length;
+  const rPct = Math.round(ritualDone / ritualKeys.length * 100);
+
+  const suppKeys = ['supp-omega-am','supp-multi','supp-fin','supp-creatine','supp-omega-pm'];
+  const suppDone = suppKeys.filter(k => state.checks[k]).length;
+  const waterPct = state.bottles / 3;
+  const noSnack = state.checks['no-snacking'] ? 1 : 0;
+  const hPct = Math.round(((suppDone / suppKeys.length) + waterPct + noSnack) / 3 * 100);
+
+  const priKeys = ['p1','p2','p3'];
+  const priDone = priKeys.filter(k => state.priorities[k]?.done).length;
+  const pPct = Math.round(priDone / priKeys.length * 100);
+  const overall = Math.round((rPct + hPct + pPct) / 3);
+
+  document.getElementById('score-rituals').textContent = rPct + '%';
+  document.getElementById('score-habits').textContent = hPct + '%';
+  document.getElementById('score-priorities').textContent = pPct + '%';
+  document.getElementById('score-overall').textContent = overall + '%';
+  document.getElementById('overall-pct').textContent = overall + '%';
+
+  state.scores = { rituals: rPct+'%', habits: hPct+'%', priorities: pPct+'%', overall: overall+'%' };
+}
+
+// ═══════════════════════════════════════════════
+// PAGE / TAB NAV
+// ═══════════════════════════════════════════════
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'trends') renderTrends();
+}
+function showTab(group, id, btn) {
+  document.querySelectorAll('[id^="' + group + '-"]').forEach(el => el.classList.remove('active'));
+  document.getElementById(group + '-' + id).classList.add('active');
+  btn.closest('.tab-row').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// PERSISTENT STORAGE — OPTION A
+// ═══════════════════════════════════════════════
+function setSaveStatus(status, text) {
+  const dot = document.getElementById('save-dot');
+  const txt = document.getElementById('save-text');
+  dot.className = 'save-dot ' + status;
+  txt.textContent = text;
+}
+
+async function saveToStorage() {
+  setSaveStatus('saving', 'Saving…');
+  try {
+    // Collect live text fields into state
+    state.moodWord = document.getElementById('mood-word').value;
+    state.theme = document.getElementById('today-theme').value;
+    state.morningIntention = document.getElementById('morning-intention').value;
+    state.successCriteria = document.getElementById('success-criteria').value;
+    state.workoutNote = document.getElementById('workout-note').value;
+    state.snackTrigger = document.getElementById('snack-trigger').value;
+    state.wins.w1 = document.getElementById('win1').value;
+    state.wins.w2 = document.getElementById('win2').value;
+    state.wins.w3 = document.getElementById('win3').value;
+    state.wouldDoDifferently = document.getElementById('would-do-differently').value;
+    state.tomorrowIntention = document.getElementById('tomorrow-intention').value;
+    state.emotionalCheckin = document.getElementById('emotional-checkin').value;
+    state.priorities.p1.text = document.querySelector('[data-key="p1"] .pri-text')?.textContent || '';
+    state.priorities.p2.text = document.querySelector('[data-key="p2"] .pri-text')?.textContent || '';
+    state.priorities.p3.text = document.querySelector('[data-key="p3"] .pri-text')?.textContent || '';
+
+    // Save today's state
+    allDays[TODAY] = { ...state };
+
+    // Store everything
+    await window.storage.set('gus-all-days', JSON.stringify(allDays));
+    await window.storage.set('gus-webhook-url', webhookUrl);
+    
+    setSaveStatus('saved', 'Saved · ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}));
+    updateStreaks();
+    document.getElementById('days-stored').textContent = Object.keys(allDays).length;
+  } catch(e) {
+    setSaveStatus('error', 'Save failed — ' + e.message);
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveToStorage, 1200);
+}
+
+async function loadFromStorage() {
+  setSaveStatus('saving', 'Loading your data…');
+  try {
+    // Load all days
+    const allResult = await window.storage.get('gus-all-days');
+    if (allResult) allDays = JSON.parse(allResult.value);
+
+    // Load webhook
+    const webhookResult = await window.storage.get('gus-webhook-url');
+    if (webhookResult) {
+      webhookUrl = webhookResult.value;
+      document.getElementById('webhook-url-input').value = webhookUrl;
+      setSheetStatus(!!webhookUrl);
+    }
+
+    // If today exists, restore it
+    if (allDays[TODAY]) {
+      state = { ...state, ...allDays[TODAY] };
+      restoreUI();
+    }
+
+    setSaveStatus('saved', 'Ready · ' + Object.keys(allDays).length + ' days stored');
+    document.getElementById('days-stored').textContent = Object.keys(allDays).length;
+    updateStreaks();
+  } catch(e) {
+    // First time or storage empty
+    setSaveStatus('saved', 'Ready — no previous data');
+    // Show setup overlay if no webhook
+    if (!webhookUrl) {
+      setTimeout(() => document.getElementById('setup-overlay').style.display = 'flex', 800);
+    }
+  }
+}
+
+function restoreUI() {
+  // Energy
+  if (state.energy) {
+    const btn = document.getElementById('en-' + state.energy);
+    if (btn) { document.querySelectorAll('.energy-btn').forEach(b => b.classList.remove('sel-high','sel-mid','sel-low')); btn.classList.add('sel-' + state.energy); }
+  }
+  // Text fields
+  const fields = {
+    'mood-word': state.moodWord,
+    'today-theme': state.theme,
+    'morning-intention': state.morningIntention,
+    'success-criteria': state.successCriteria,
+    'workout-note': state.workoutNote,
+    'snack-trigger': state.snackTrigger,
+    'win1': state.wins?.w1,
+    'win2': state.wins?.w2,
+    'win3': state.wins?.w3,
+    'would-do-differently': state.wouldDoDifferently,
+    'tomorrow-intention': state.tomorrowIntention,
+    'emotional-checkin': state.emotionalCheckin,
+  };
+  Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if (el && val) el.value = val; });
+
+  // Check items
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    if (state.checks[key]) el.classList.add('done');
+  });
+
+  // Priorities
+  ['p1','p2','p3'].forEach(k => {
+    const item = document.querySelector('[data-key="' + k + '"]');
+    if (!item) return;
+    const textEl = item.querySelector('.pri-text');
+    if (state.priorities[k]?.text) textEl.textContent = state.priorities[k].text;
+    if (state.priorities[k]?.done) item.classList.add('done');
+  });
+
+  // Bottles
+  buildBottles();
+  updateScores();
+}
+
+// ═══════════════════════════════════════════════
+// STREAKS
+// ═══════════════════════════════════════════════
+function updateStreaks() {
+  let habitStreak = 0, workoutStreak = 0, meditateStreak = 0;
+  const sortedDays = Object.keys(allDays).sort().reverse();
+  
+  for (let i = 0; i < sortedDays.length; i++) {
+    const d = allDays[sortedDays[i]];
+    const pct = parseInt(d.scores?.overall || '0');
+    if (pct >= 50) habitStreak++;
+    else if (i > 0) break;
+  }
+  for (let i = 0; i < sortedDays.length; i++) {
+    const d = allDays[sortedDays[i]];
+    if (d.checks?.workout) workoutStreak++;
+    else if (i > 0) break;
+  }
+  for (let i = 0; i < sortedDays.length; i++) {
+    const d = allDays[sortedDays[i]];
+    if (d.checks?.meditate) meditateStreak++;
+    else if (i > 0) break;
+  }
+  
+  state.streaks = { habits: habitStreak, workout: workoutStreak, meditate: meditateStreak };
+  document.getElementById('streak-habits').textContent = habitStreak + 'd';
+  document.getElementById('streak-workout').textContent = workoutStreak + 'd';
+  document.getElementById('streak-meditate').textContent = meditateStreak + 'd';
+}
+
+// ═══════════════════════════════════════════════
+// TRENDS
+// ═══════════════════════════════════════════════
+function renderTrends() {
+  const container = document.getElementById('trends-content');
+  const keys = Object.keys(allDays).sort().slice(-30);
+  
+  if (keys.length < 2) {
+    container.innerHTML = '<div class="no-data">Complete at least 2 days to see trends. Your data builds up automatically each day.</div>';
+    return;
+  }
+
+  const last7 = keys.slice(-7);
+  const data7 = last7.map(k => allDays[k]);
+
+  // Summary stats
+  const avgOverall = Math.round(data7.reduce((s,d) => s + parseInt(d.scores?.overall||0), 0) / data7.length);
+  const workoutDays = data7.filter(d => d.checks?.workout).length;
+  const meditateDays = data7.filter(d => d.checks?.meditate).length;
+  const avgWater = Math.round(data7.reduce((s,d) => s + (d.bottles||0)*900, 0) / data7.length);
+
+  container.innerHTML = `
+    <div class="trend-section">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${avgOverall}%</div><div class="stat-lbl">Avg score (7d)</div></div>
+        <div class="stat-card"><div class="stat-val">${workoutDays}/7</div><div class="stat-lbl">Workout days</div></div>
+        <div class="stat-card"><div class="stat-val">${meditateDays}/7</div><div class="stat-lbl">Meditation days</div></div>
+        <div class="stat-card"><div class="stat-val">${avgWater}ml</div><div class="stat-lbl">Avg water/day</div></div>
+      </div>
+    </div>
+    <div class="trend-section">
+      <div class="trend-title">Overall score — last 7 days</div>
+      <div class="bar-chart" id="bar-overall"></div>
+    </div>
+    <div class="trend-section" style="margin-top:20px;">
+      <div class="trend-title">Habit heatmap — last ${keys.length} days</div>
+      <div class="heatmap" id="heatmap"></div>
+    </div>
+  `;
+
+  // Bar chart
+  const barContainer = document.getElementById('bar-overall');
+  last7.forEach((dateKey, i) => {
+    const d = allDays[dateKey];
+    const pct = parseInt(d.scores?.overall || '0');
+    const dayName = DAYS[new Date(dateKey).getDay()].slice(0,3);
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    const color = pct >= 80 ? 'var(--accent2)' : pct >= 50 ? 'var(--accent)' : 'var(--accent3)';
+    col.innerHTML = `
+      <div class="bar-col-bar" style="height:${pct * 0.8}px;background:${color};width:100%;"></div>
+      <div class="bar-col-lbl">${dayName}</div>
+      <div class="bar-col-val">${pct}%</div>
+    `;
+    barContainer.appendChild(col);
+  });
+
+  // Heatmap
+  const heatmap = document.getElementById('heatmap');
+  const habitRows = [
+    { label: 'Meditate', key: 'meditate', isCheck: true },
+    { label: 'Workout', key: 'workout', isCheck: true },
+    { label: 'Supplements', key: 'supp-creatine', isCheck: true },
+    { label: 'Water 2.4L', key: '_water', isCheck: false },
+    { label: 'No snacking', key: 'no-snacking', isCheck: true },
+  ];
+  habitRows.forEach(habit => {
+    const row = document.createElement('div');
+    row.className = 'hmap-row';
+    row.innerHTML = `<div class="hmap-lbl">${habit.label}</div><div class="hmap-cells" id="hmap-${habit.key}"></div>`;
+    heatmap.appendChild(row);
+    const cells = document.getElementById('hmap-' + habit.key);
+    keys.forEach(dateKey => {
+      const d = allDays[dateKey];
+      let done;
+      if (habit.key === '_water') done = (d.bottles || 0) >= 3;
+      else done = !!d.checks?.[habit.key];
+      const cell = document.createElement('div');
+      cell.className = 'hmap-cell ' + (done ? 'done' : 'missed');
+      cell.title = dateKey.slice(5) + ': ' + (done ? '✓' : '✗');
+      cells.appendChild(cell);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE SHEETS SYNC — OPTION B
+// ═══════════════════════════════════════════════
+function setSheetStatus(connected) {
+  const dot = document.getElementById('sheet-dot');
+  const txt = document.getElementById('sheet-text');
+  dot.className = 'sheet-dot ' + (connected ? 'connected' : 'disconnected');
+  txt.textContent = connected ? 'Sheets connected' : 'Sheets not connected';
+}
+
+async function syncToSheets() {
+  if (!webhookUrl) {
+    document.getElementById('sync-result').textContent = '⚠ No webhook URL — go to Settings tab to connect.';
+    return;
+  }
+  
+  await saveToStorage(); // make sure state is current
+  
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Syncing…';
+  document.getElementById('sync-result').textContent = '';
+
+  const payload = {
+    date: TODAY,
+    day: DAYS[new Date().getDay()],
+    energy: state.energy,
+    moodWord: state.moodWord,
+    theme: state.theme,
+    checks: state.checks,
+    bottles: state.bottles,
+    scores: state.scores,
+    priorities: state.priorities,
+    successCriteria: state.successCriteria,
+    workoutNote: state.workoutNote,
+    wins: state.wins,
+    wouldDoDifferently: state.wouldDoDifferently,
+    tomorrowIntention: state.tomorrowIntention,
+    emotionalCheckin: state.emotionalCheckin,
+    streaks: state.streaks,
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors', // Google Apps Script requires this
+    });
+    // no-cors means we can't read response, but if no error thrown it worked
+    state.lastSync = new Date().toISOString();
+    await window.storage.set('gus-all-days', JSON.stringify(allDays));
+    document.getElementById('sync-result').textContent = '✓ Synced to Google Sheets at ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+    setSheetStatus(true);
+  } catch(e) {
+    document.getElementById('sync-result').textContent = '✗ Sync failed: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📊 Sync to Google Sheets now';
+  }
+}
+
+async function saveWebhookUrl() {
+  const url = document.getElementById('setup-url-input').value.trim();
+  if (!url.includes('script.google.com')) {
+    alert('That doesn\'t look like a Google Apps Script URL. Please check and try again.');
+    return;
+  }
+  webhookUrl = url;
+  document.getElementById('webhook-url-input').value = url;
+  await window.storage.set('gus-webhook-url', url);
+  document.getElementById('setup-overlay').style.display = 'none';
+  setSheetStatus(true);
+}
+
+async function saveWebhookFromSettings() {
+  const url = document.getElementById('webhook-url-input').value.trim();
+  if (!url) { document.getElementById('settings-sync-result').textContent = 'Please enter a URL.'; return; }
+  webhookUrl = url;
+  await window.storage.set('gus-webhook-url', url);
+  setSheetStatus(true);
+  document.getElementById('settings-sync-result').textContent = '✓ Saved. Click Sync in Evening tab to test.';
+}
+
+function skipSetup() {
+  document.getElementById('setup-overlay').style.display = 'none';
+  webhookUrl = '';
+  setSheetStatus(false);
+}
+
+// ═══════════════════════════════════════════════
+// DATA UTILITIES
+// ═══════════════════════════════════════════════
+function exportData() {
+  const blob = new Blob([JSON.stringify(allDays, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gus-command-centre-' + TODAY + '.json';
+  a.click();
+}
+
+async function clearAllData() {
+  try {
+    await window.storage.delete('gus-all-days');
+    await window.storage.delete('gus-webhook-url');
+    allDays = {};
+    location.reload();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════
+// SETUP OVERLAY TRIGGER
+// ═══════════════════════════════════════════════
+function showSetup() {
+  document.getElementById('setup-overlay').style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildBottles();
+loadFromStorage();
+</script>
+</body>
+</html>
